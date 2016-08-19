@@ -1,0 +1,16 @@
+{
+  "name": "serial-to-phant",
+  "version": "0.0.0",
+  "description": "",
+  "main": "dist/app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Rob Gilson",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "phant-client": "0.0.6",
+    "serialport": "4.0.1"
+  }
+}
