@@ -1,22 +1,47 @@
-var Phant = require('phant-client').Phant
-var SerialPort = require('serialport')
+const Phant = require('phant-client').Phant
+const SerialPort = require('serialport')
+const koa = require('koa')
+const route = require('koa-route')
+const websockify = require('koa-websocket')
+const serve = require('koa-static')
+
+const dryRun = false
 
 class SerialToPhant {
 
   constructor(opts) {
-    this.streamd = null
-    var settingKeys = ['port', 'phant', 'iri']
+    const settingKeys = ['port', 'phant', 'iri']
     settingKeys.forEach((k) => {
       if (opts[k] == null) throw k + ' is not defined'
       this[k] = opts[k]
     })
+
+    this.streamd = null
   }
 
   connect() {
     console.log('Connecting...')
+
+    // Arduino
     this.port.on('open', this.onPortOpen.bind(this))
     this.port.on('error', this.onError('SERIAL').bind(this))
     this.port.on('data', this.onSerialData.bind(this))
+
+    // Phant
+    this.phant.connect(this.iri, this.onPhantConnect.bind(this))
+
+    // Local Websocket + Frontend
+    this.app = websockify(koa())
+
+    this.app.use(serve(__dirname + "/static/"))
+
+    var self = this
+    this.app.ws.use(route.all('/stream', function* (next) {
+      // yielding `next` will pass the context (this) on to the next ws middleware
+      yield next
+    }))
+
+    this.app.listen(4321)
   }
 
   isConnectedToPhant() {
@@ -25,21 +50,22 @@ class SerialToPhant {
 
   onPortOpen() {
     console.log("Connected to Arduino")
-    this.phant.connect(this.iri, this.onPhantConnect.bind(this))
   }
 
   onPhantConnect(error, streamd) {
-    if (error) onError('PHANT')(error)
+    if (error) this.onError('PHANT')(error)
     console.log('Connected to Phant')
     this.streamd = streamd
   }
 
   onSerialData(data) {
-    if (!this.isConnectedToPhant()) return
     // console.log('SERIAL RAW DATA RECEIVED:', data)
     data = JSON.parse(data)
     console.log('SERIAL DATA RECEIVED:', data)
-    this.phant.add(this.streamd, data)
+    if (this.isConnectedToPhant()) {
+      this.phant.add(this.streamd, data)
+    }
+    this.app.ws.server.clients.forEach((client) => client.send(JSON.stringify(data)))
   }
 
   onError(type) {
@@ -66,7 +92,17 @@ var connectTo = (portInfo) => {
   new SerialToPhant(settings).connect()
 }
 
-if (secrets.ports == null) {
+if (dryRun) {
+  console.log("DRY RUN    DRY RUN    DRY RUN    DRY RUN    DRY RUN    DRY RUN\n")
+  new SerialToPhant({
+    phant: new Phant(),
+    iri: secrets.iri,
+    port: {
+      on(e, fn) {}
+    }
+  }).connect()
+}
+else if (secrets.ports == null) {
   SerialPort.list((err, ports) => {
     var portInfo = ports.filter((p) => (p.manufacturer||'').startsWith('Arduino'))[0]
     if (portInfo == null) {

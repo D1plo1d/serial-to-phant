@@ -4,6 +4,7 @@
   "description": "",
   "main": "dist/app.js",
   "scripts": {
+    "start": "node ./src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Rob Gilson",
@@ -11,6 +12,10 @@
   "private": true,
   "dependencies": {
     "phant-client": "0.0.6",
-    "serialport": "4.0.1"
+    "serialport": "4.0.1",
+    "koa": "*",
+    "koa-static": "*",
+    "koa-route": "*",
+    "koa-websocket": "*"
   }
 }
