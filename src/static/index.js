@@ -6,7 +6,9 @@ class App extends React.Component {
       console.log(data)
       this.setState(data)
       clearTimeout(this.timeout)
-      this.timeout = setTimeout(() => {this.setState({user: "Unknown"})}, 1000)
+      this.timeout = setTimeout(() => {
+        this.setState({user: "Unknown", weight: 0})}
+      , 1000)
     }
   }
 
